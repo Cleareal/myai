@@ -3,42 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的私人 DeepSeek</title>
+    <title>我的私人小说创作助手</title>
     <!-- 引入 Puter.js -->
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f5f7; }
-        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; background: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; margin-top: 10px; font-weight: bold; }
-        #result { margin-top: 20px; white-space: pre-wrap; line-height: 1.6; color: #333; }
+        body { font-family: -apple-system, system-ui, sans-serif; padding: 15px; background: #f4f4f6; margin: 0; }
+        .box { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 800px; margin: 10px auto; display: flex; flex-direction: column; height: 92vh; box-sizing: border-box; }
+        h2 { margin-top: 0; margin-bottom: 10px; font-size: 18px; color: #1c1c1e; text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        #result { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
+        .user-msg { color: #007aff; font-weight: bold; margin-top: 15px; font-size: 14px; }
+        .ai-msg { color: #2c2c2e; margin-bottom: 15px; background: #f2f2f7; padding: 14px; border-radius: 12px; line-height: 1.7; font-size: 15px; white-space: pre-wrap; }
+        .control-area { display: flex; flex-direction: column; gap: 8px; }
+        textarea { width: 100%; height: 80px; border: 1px solid #d1d1d6; border-radius: 10px; padding: 12px; box-sizing: border-box; font-size: 15px; resize: none; -webkit-appearance: none; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        #btn { background: #007aff; }
+        #clear-btn { background: #ff3b30; max-width: 100px; font-size: 13px; font-weight: normal; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>DeepSeek 免实名通道</h2>
-        <textarea id="input" placeholder="请输入你想问的问题..."></textarea>
-        <button id="btn">发送给 DeepSeek</button>
-        <div id="result"></div>
+        <h2>✍️ DeepSeek 小说创作助手</h2>
+        <div id="result">还没有开始创作。输入你的大纲、人设或剧情要求让 DeepSeek 开始吧！</div>
+        
+        <div class="control-area">
+            <textarea id="input" placeholder="输入续写要求（例如：续写下一章，主角遭遇了埋伏...）"></textarea>
+            <div class="btn-group">
+                <button id="clear-btn">清空小说</button>
+                <button id="btn">发送指令</button>
+            </div>
+        </div>
     </div>
 
     <script>
+        // 小说家专属系统提示词
+        const SYSTEM_PROMPT = { 
+            "role": "system", 
+            "content": "你是一位拥有十年经验的资深网络小说作家、剧情架构师以及金牌编辑。你精通各种网文流派的网感、伏笔设计、节奏掌控和高潮打造。请自始至终使用【中文】进行思考和小说创作。在创作时，注重环境描写、人物心理刻画以及跌宕起伏的对话，拒绝平铺直叙。请根据作者的要求进行高水准的续写、润色或大纲设计。" 
+        };
+
+        // 从手机本地读取保存的小说记录，如果找不到就新建
+        let chatHistory = JSON.parse(localStorage.getItem('novel_history')) || [SYSTEM_PROMPT];
+
+        const resultDiv = document.getElementById('result');
+        const inputArea = document.getElementById('input');
+
+        function renderChat() {
+            if (chatHistory.length <= 1) {
+                resultDiv.innerHTML = '<div style="color:#8e8e93;text-align:center;margin-top:40px;">还没有开始创作。输入你的大纲、人设或剧情要求让 DeepSeek 开始吧！</div>';
+                return;
+            }
+            let html = "";
+            chatHistory.forEach(msg => {
+                if (msg.role === 'user') {
+                    html += `<div class="user-msg">💡 你的要求：${msg.content}</div>`;
+                } else if (msg.role === 'assistant') {
+                    html += `<div class="ai-msg">${msg.content}</div>`;
+                }
+            });
+            resultDiv.innerHTML = html;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+
+        // 页面打开时，先渲染一次之前保存的内容
+        renderChat();
+
         document.getElementById('btn').addEventListener('click', async () => {
-            const input = document.getElementById('input').value;
-            if(!input) return alert('请输入内容');
+            const userInput = inputArea.value.trim();
+            if(!userInput) return alert('请输入你的创作要求');
             
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerText = "思考中，请稍候...";
+            chatHistory.push({ "role": "user", "content": userInput });
+            inputArea.value = "";
+            renderChat();
             
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = "ai-msg";
+            loadingDiv.style.color = "#8e8e93";
+            loadingDiv.innerText = "✍️ 正在构思剧情，请稍候...";
+            resultDiv.appendChild(loadingDiv);
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+
             try {
-                // 这里直接调用 Puter 托管的 DeepSeek 模型，无需任何 Key
+                // 带着全部历史剧情记忆，调用大模型
                 const response = await puter.ai.chat(
-                    input + " (请始终用中文回答)", 
+                    chatHistory, 
                     { model: "deepseek/deepseek-v4-pro" } 
                 );
-                resultDiv.innerText = response;
+                
+                resultDiv.removeChild(loadingDiv);
+                chatHistory.push({ "role": "assistant", "content": response });
+                
+                // 将最新的小说进度和记忆永久保存在手机本地
+                localStorage.setItem('novel_history', JSON.stringify(chatHistory));
+                renderChat();
+
             } catch (error) {
-                resultDiv.innerText = "出错了: " + error.message;
+                if(loadingDiv) resultDiv.removeChild(loadingDiv);
+                alert("出错了: " + error.message);
+            }
+        });
+
+        // 清空历史按钮
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            if(confirm("确定要清空目前所有的小说和对话历史吗？（不可恢复）")) {
+                chatHistory = [SYSTEM_PROMPT];
+                localStorage.removeItem('novel_history');
+                renderChat();
             }
         });
     </script>
