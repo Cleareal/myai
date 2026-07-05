@@ -36,14 +36,14 @@
     </div>
 
     <script>
-        // 小说家专属系统提示词
+        // 修正：Puter 要求的系统提示词格式，字段名必须为 type
         const SYSTEM_PROMPT = { 
-            "role": "system", 
+            "type": "system", 
             "content": "你是一位拥有十年经验的资深网络小说作家、剧情架构师以及金牌编辑。你精通各种网文流派的网感、伏笔设计、节奏掌控和高潮打造。请自始至终使用【中文】进行思考和小说创作。在创作时，注重环境描写、人物心理刻画以及跌宕起伏的对话，拒绝平铺直叙。请根据作者的要求进行高水准的续写、润色或大纲设计。" 
         };
 
-        // 从手机本地读取保存的小说记录，如果找不到就新建
-        let chatHistory = JSON.parse(localStorage.getItem('novel_history')) || [SYSTEM_PROMPT];
+        // 从本地读取历史，如果没有则初始化
+        let chatHistory = JSON.parse(localStorage.getItem('novel_history_fixed')) || [SYSTEM_PROMPT];
 
         const resultDiv = document.getElementById('result');
         const inputArea = document.getElementById('input');
@@ -55,9 +55,9 @@
             }
             let html = "";
             chatHistory.forEach(msg => {
-                if (msg.role === 'user') {
+                if (msg.type === 'user') {
                     html += `<div class="user-msg">💡 你的要求：${msg.content}</div>`;
-                } else if (msg.role === 'assistant') {
+                } else if (msg.type === 'assistant') {
                     html += `<div class="ai-msg">${msg.content}</div>`;
                 }
             });
@@ -65,14 +65,14 @@
             resultDiv.scrollTop = resultDiv.scrollHeight;
         }
 
-        // 页面打开时，先渲染一次之前保存的内容
         renderChat();
 
         document.getElementById('btn').addEventListener('click', async () => {
             const userInput = inputArea.value.trim();
             if(!userInput) return alert('请输入你的创作要求');
             
-            chatHistory.push({ "role": "user", "content": userInput });
+            // 修正：存入数组的属性名改为 type
+            chatHistory.push({ "type": "user", "content": userInput });
             inputArea.value = "";
             renderChat();
             
@@ -84,30 +84,34 @@
             resultDiv.scrollTop = resultDiv.scrollHeight;
 
             try {
-                // 带着全部历史剧情记忆，调用大模型
+                // 调用 Puter 托管的 DeepSeek 模型
                 const response = await puter.ai.chat(
                     chatHistory, 
                     { model: "deepseek/deepseek-v4-pro" } 
                 );
                 
-                resultDiv.removeChild(loadingDiv);
-                chatHistory.push({ "role": "assistant", "content": response });
+                if(loadingDiv && resultDiv.contains(loadingDiv)) {
+                    resultDiv.removeChild(loadingDiv);
+                }
                 
-                // 将最新的小说进度和记忆永久保存在手机本地
-                localStorage.setItem('novel_history', JSON.stringify(chatHistory));
+                // 修正：存入返回的属性名改为 type
+                chatHistory.push({ "type": "assistant", "content": response });
+                
+                localStorage.setItem('novel_history_fixed', JSON.stringify(chatHistory));
                 renderChat();
 
             } catch (error) {
-                if(loadingDiv) resultDiv.removeChild(loadingDiv);
+                if(loadingDiv && resultDiv.contains(loadingDiv)) {
+                    resultDiv.removeChild(loadingDiv);
+                }
                 alert("出错了: " + error.message);
             }
         });
 
-        // 清空历史按钮
         document.getElementById('clear-btn').addEventListener('click', () => {
             if(confirm("确定要清空目前所有的小说和对话历史吗？（不可恢复）")) {
                 chatHistory = [SYSTEM_PROMPT];
-                localStorage.removeItem('novel_history');
+                localStorage.removeItem('novel_history_fixed');
                 renderChat();
             }
         });
