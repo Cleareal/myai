@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的私人 DeepSeek</title>
+    <!-- 引入 Puter.js -->
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f5f7; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; background: #007aff; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; margin-top: 10px; font-weight: bold; }
+        #result { margin-top: 20px; white-space: pre-wrap; line-height: 1.6; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>DeepSeek 免实名通道</h2>
+        <textarea id="input" placeholder="请输入你想问的问题..."></textarea>
+        <button id="btn">发送给 DeepSeek</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('btn').addEventListener('click', async () => {
+            const input = document.getElementById('input').value;
+            if(!input) return alert('请输入内容');
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = "思考中，请稍候...";
+            
+            try {
+                // 这里直接调用 Puter 托管的 DeepSeek 模型，无需任何 Key
+                const response = await puter.ai.chat(
+                    input + " (请始终用中文回答)", 
+                    { model: "deepseek/deepseek-v4-pro" } 
+                );
+                resultDiv.innerText = response;
+            } catch (error) {
+                resultDiv.innerText = "出错了: " + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
